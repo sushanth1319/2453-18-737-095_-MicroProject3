@@ -1,0 +1,82 @@
+const express=require('express')   
+const app=express()   
+const bodyParser=require('body-parser')   
+const MongoClient=require('mongodb').MongoClient   
+var db; 
+var s;
+
+MongoClient.connect('mongodb://localhost:27017/Inventory', (err,database) =>{        
+	if(err) return console.log(err)
+	db=database.db('Cars')     
+	app.listen(5000,() =>{
+		console.log('Listening at port number 5000')
+	})
+})
+
+app.set('view engine','ejs')
+app.use(bodyParser.urlencoded({extended:true})) 
+app.use(bodyParser.json())   
+app.use(express.static('public'))  
+
+//homepage
+app.get('/', (req,res)=>{                
+	db.collection('Company').find().toArray( (err,result)=>{     
+		if(err) return console.log(err)     
+	res.render('homepage.ejs', {data:result})      
+	})
+})
+
+//for add
+app.get('/create', (req,res)=>{     //change
+	res.render('add.ejs')            //change
+})
+
+//for update
+app.get('/updatestock', (req,res)=>{			//change
+	res.render('update.ejs')				//change
+})
+
+
+//for delete
+app.get('/deleteproduct', (req,res)=>{		//change
+	res.render('delete.ejs')		//change
+})
+
+//post request code-
+app.post('/AddData', (req,res)=>{			
+	db.collection('Company').save(req.body, (err,result)=>{			
+		if(err) return console.log(err)
+	res.redirect('/')                        
+	})
+})
+
+//post-update stock 
+app.post('/update', (req,res)=>{			
+		db.collection('Company').find().toArray((err,result)=>{	   			
+			if(err) 
+				return console.log(err)
+			for(var i=0;i<result.length;i++){
+				if(result[i].pid==req.body.id){
+					s=result[i].Stock
+					break
+				}
+			}
+			db.collection('Company').findOneAndUpdate({pid:req.body.id},{
+				$set:{Stock: parseInt(s) +parseInt(req.body.Stock)}} , {sort:{_id:-1}},
+				(err,result) =>{
+					if(err)
+						return console.log(err)
+					console.log(req.body.id+'stock updated')
+					res.redirect('/')
+				})
+			})	
+		})
+
+//post- delete stock
+app.post('/delete',(req,res)=>{
+	db.collection('Company').findOneAndDelete({pid:req.body.id}, (err,result)=>{    
+		if(err)
+			return console.log(err)
+		res.redirect('/')
+	})
+})
